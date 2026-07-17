@@ -3,6 +3,7 @@ import {
   clamp,
   hostnameOf,
   randomInt,
+  safeEqual,
   shortId,
 } from '../src/shared/utils.js';
 import { AppError, toError, isAppError, ValidationError } from '../src/shared/errors.js';
@@ -32,6 +33,13 @@ describe('utils', () => {
     const b = shortId('task_');
     expect(a.startsWith('task_')).toBe(true);
     expect(a).not.toBe(b);
+  });
+
+  it('safeEqual matches identical strings and rejects others', () => {
+    expect(safeEqual('secret-token', 'secret-token')).toBe(true);
+    expect(safeEqual('secret-token', 'secret-toke')).toBe(false); // length diff
+    expect(safeEqual('secret-token', 'Secret-token')).toBe(false); // content diff
+    expect(safeEqual('', '')).toBe(true);
   });
 });
 

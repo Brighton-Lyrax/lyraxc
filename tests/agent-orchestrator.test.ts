@@ -137,4 +137,43 @@ describe('AgentOrchestrator', () => {
     expect(task.steps.length).toBeLessThanOrEqual(10);
     expect(task.status).toBe('completed');
   });
+
+  it('rejects a run with 429 when the concurrency limit is reached', async () => {
+    const session = new FakeBrowserSession();
+    const provider = new FakeBrowserProvider(() => session);
+    // Planner whose first plan blocks until we release it, keeping a slot held.
+    let releaseFirst!: () => void;
+    const blocker = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let calls = 0;
+    const planner = {
+      async planNextAction() {
+        calls += 1;
+        if (calls === 1) await blocker;
+        return { type: 'finish', summary: 'done', success: true } as const;
+      },
+    };
+    const orchestrator = new AgentOrchestrator(
+      provider,
+      planner,
+      new InMemoryTaskRepository(),
+      testConfig({
+        server: { ...testConfig().server, maxConcurrentTasks: 1 },
+      }),
+      silentLogger(),
+    );
+
+    const first = orchestrator.run({ instruction: 'first' });
+    // Give the first run a tick to acquire the only slot.
+    await new Promise((r) => setTimeout(r, 5));
+
+    await expect(orchestrator.run({ instruction: 'second' })).rejects.toMatchObject(
+      { code: 'TOO_MANY_TASKS', statusCode: 429 },
+    );
+
+    releaseFirst();
+    const firstResult = await first;
+    expect(firstResult.status).toBe('completed');
+  });
 });
