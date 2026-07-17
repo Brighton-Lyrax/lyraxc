@@ -58,7 +58,7 @@ export function createApp(container: Container): express.Express {
 
   // --- Fallbacks ---
   app.use('/api', notFoundHandler);
-  app.use(errorHandler(logger));
+  app.use(errorHandler(config, logger));
 
   return app;
 }

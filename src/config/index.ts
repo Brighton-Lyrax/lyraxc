@@ -28,6 +28,11 @@ const envSchema = z.object({
   HOST: z.string().default('127.0.0.1'),
   CORS_ORIGINS: z.string().default('http://localhost:5173'),
   API_KEY: z.string().default(''),
+  // When true, structured error `details` are included in API responses.
+  // Keep false in production to avoid leaking internal context.
+  EXPOSE_ERROR_DETAILS: booleanFromString.default('false'),
+  // Maximum number of tasks allowed to run concurrently across the process.
+  MAX_CONCURRENT_TASKS: z.coerce.number().int().positive().max(100).default(4),
 
   // Logging
   LOG_LEVEL: z
@@ -75,6 +80,8 @@ export interface AppConfig {
     host: string;
     corsOrigins: string[];
     apiKey: string;
+    exposeErrorDetails: boolean;
+    maxConcurrentTasks: number;
   };
   logging: {
     level: RawEnv['LOG_LEVEL'];
@@ -129,6 +136,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
         ? e.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean)
         : ['*'],
       apiKey: e.API_KEY,
+      exposeErrorDetails: e.EXPOSE_ERROR_DETAILS,
+      maxConcurrentTasks: e.MAX_CONCURRENT_TASKS,
     },
     logging: {
       level: e.LOG_LEVEL,

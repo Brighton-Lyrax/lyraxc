@@ -2,6 +2,8 @@
  * Small, dependency-free helpers used across the codebase.
  */
 
+import { timingSafeEqual } from 'node:crypto';
+
 /** Resolve after `ms` milliseconds. */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
@@ -44,4 +46,19 @@ export function hostnameOf(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Constant-time string comparison to avoid leaking secrets (e.g. API keys) via
+ * timing side channels.
+ *
+ * A length mismatch returns false immediately; this reveals only the length,
+ * not the content. Equal-length inputs are compared in time independent of
+ * where the first differing byte is.
+ */
+export function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, 'utf8');
+  const bufB = Buffer.from(b, 'utf8');
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
 }

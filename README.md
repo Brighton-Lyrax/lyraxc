@@ -134,6 +134,8 @@ with Zod). Copy `.env.example` to `.env` and adjust. Key options:
 | `PORT` / `HOST` | `3000` / `127.0.0.1` | HTTP server bind. |
 | `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed origins. |
 | `API_KEY` | _(empty)_ | Bearer token required by the API/WebSocket. Empty = no auth (dev only). |
+| `EXPOSE_ERROR_DETAILS` | `false` | Include structured error `details` in API responses (debug only). |
+| `MAX_CONCURRENT_TASKS` | `4` | Max simultaneous browser tasks; excess requests get HTTP 429. |
 | `LOG_LEVEL` / `LOG_PRETTY` | `info` / `true` | Logging verbosity and pretty output. |
 | `BROWSER_HEADLESS` | `true` | Run Chromium headless. Set `false` to watch it. |
 | `BROWSER_SLOW_MO` | `0` | Slow every Playwright op by N ms. |
