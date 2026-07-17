@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Lyraxc — an autonomous agent that performs human-like actions in a real browser."
+    />
+    <title>Lyraxc — Human-like Browser Agent</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">◑</span>
+        <h1 class="brand__name">Lyraxc</h1>
+      </div>
+      <p class="tagline">Human-like browser automation from plain language</p>
+    </header>
+
+    <main id="main" class="layout">
+      <section class="panel" aria-labelledby="form-heading">
+        <h2 id="form-heading">New task</h2>
+        <form id="task-form" novalidate>
+          <div class="field">
+            <label for="start-url">Start URL <span class="muted">(optional)</span></label>
+            <input
+              id="start-url"
+              name="startUrl"
+              type="url"
+              inputmode="url"
+              placeholder="https://example.com"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="field">
+            <label for="instruction">Instruction</label>
+            <textarea
+              id="instruction"
+              name="instruction"
+              rows="4"
+              required
+              aria-describedby="instruction-hint"
+              placeholder="e.g. Go to duckduckgo.com and search for Playwright docs"
+            ></textarea>
+            <p id="instruction-hint" class="hint">
+              Describe the goal in natural language. The agent plans and acts step by step.
+            </p>
+          </div>
+
+          <div class="field field--inline">
+            <label for="api-key">API key <span class="muted">(if required)</span></label>
+            <input id="api-key" name="apiKey" type="password" autocomplete="off" />
+          </div>
+
+          <button id="run-btn" type="submit" class="btn btn--primary">
+            Run task
+          </button>
+        </form>
+      </section>
+
+      <section class="panel" aria-labelledby="log-heading">
+        <div class="panel__header">
+          <h2 id="log-heading">Activity</h2>
+          <span id="status-badge" class="badge" role="status" aria-live="polite">idle</span>
+        </div>
+        <ol id="event-log" class="event-log" aria-live="polite"></ol>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        Lyraxc is a demonstration agent. Use responsibly and only on sites you
+        are permitted to automate.
+      </p>
+    </footer>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
