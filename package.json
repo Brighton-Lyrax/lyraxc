@@ -1,6 +1,6 @@
 {
   "name": "lyraxc",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Lyraxc — an autonomous agent that performs human-like actions in a real browser from natural-language instructions.",
   "type": "module",
   "engines": {
