@@ -9,7 +9,7 @@ think-time pauses and smooth scrolling. Give it a goal in natural language and i
 plans and executes browser actions step by step — via a web UI, a REST/WebSocket
 API, or a CLI.
 
-[![CI](https://github.com/OWNER/lyraxc/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/lyraxc/actions/workflows/ci.yml)
+[![CI](https://github.com/Brighton-Lyrax/lyraxc/actions/workflows/ci.yml/badge.svg)](https://github.com/Brighton-Lyrax/lyraxc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 ---
@@ -112,7 +112,7 @@ changes to the core agent logic.
 ### Steps
 
 ```bash
-git clone https://github.com/OWNER/lyraxc.git
+git clone https://github.com/Brighton-Lyrax/lyraxc.git
 cd lyraxc
 npm install                       # also installs Chromium via postinstall
 cp .env.example .env              # then edit values as needed
