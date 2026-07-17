@@ -31,6 +31,43 @@ export class OpenAiPlanner implements Planner {
         'LLM_PROVIDER=openai but LLM_API_KEY is empty; requests will likely fail.',
       );
     }
+    this.validateBaseUrl(config.baseUrl);
+  }
+
+  /**
+   * Validate the operator-configured LLM base URL at startup.
+   *
+   * Rejects non-HTTP(S) schemes (SSRF hardening) and warns when the URL targets
+   * a loopback/private host. Local hosts are allowed (e.g. Ollama/LM Studio) but
+   * flagged so an accidental internal target is visible in the logs.
+   */
+  private validateBaseUrl(baseUrl: string): void {
+    let url: URL;
+    try {
+      url = new URL(baseUrl);
+    } catch {
+      throw new PlannerError(`LLM_BASE_URL is not a valid URL: ${baseUrl}`);
+    }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new PlannerError(
+        `LLM_BASE_URL must use http(s); got "${url.protocol}".`,
+      );
+    }
+    const host = url.hostname.toLowerCase();
+    const isPrivate =
+      host === 'localhost' ||
+      host === '0.0.0.0' ||
+      /^127\./.test(host) ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^169\.254\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+    if (isPrivate) {
+      this.logger.warn(
+        { host },
+        'LLM_BASE_URL points at a private/loopback host; ensure this is intended.',
+      );
+    }
   }
 
   async planNextAction(context: PlanningContext): Promise<AgentAction> {
