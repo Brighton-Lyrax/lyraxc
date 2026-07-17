@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Container } from '../../container.js';
 import type { AgentEvent } from '../../application/events.js';
 import { toError } from '../../shared/errors.js';
+import { safeEqual } from '../../shared/utils.js';
 
 const runMessageSchema = z.object({
   type: z.literal('run'),
@@ -26,8 +27,8 @@ export function attachWebSocket(server: Server, container: Container): WebSocket
     // Enforce API key on the WebSocket handshake when configured.
     if (config.server.apiKey) {
       const url = new URL(req.url ?? '', 'http://localhost');
-      const token = url.searchParams.get('apiKey');
-      if (token !== config.server.apiKey) {
+      const token = url.searchParams.get('apiKey') ?? '';
+      if (!safeEqual(token, config.server.apiKey)) {
         socket.send(JSON.stringify({ type: 'error', message: 'Unauthorized' }));
         socket.close();
         return;
@@ -35,6 +36,8 @@ export function attachWebSocket(server: Server, container: Container): WebSocket
     }
 
     logger.debug('WebSocket client connected');
+    // Guard against a single client launching many concurrent browser runs.
+    let busy = false;
     const send = (payload: AgentEvent | { type: 'error'; message: string }) => {
       if (socket.readyState === socket.OPEN) {
         socket.send(JSON.stringify(payload));
@@ -47,10 +50,20 @@ export function attachWebSocket(server: Server, container: Container): WebSocket
         send({ type: 'error', message: 'Invalid message. Expected a run command.' });
         return;
       }
+      if (busy) {
+        send({
+          type: 'error',
+          message: 'A task is already running on this connection. Wait for it to finish.',
+        });
+        return;
+      }
+      busy = true;
       try {
         await container.orchestrator.run(parsed.data, send);
       } catch (error) {
         send({ type: 'error', message: toError(error).message });
+      } finally {
+        busy = false;
       }
     });
 

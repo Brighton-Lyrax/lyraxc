@@ -8,6 +8,7 @@ import type {
 import { createTask, type Task } from '../domain/task.js';
 import type { Logger } from '../infrastructure/logging/logger.js';
 import { AppError, toError, ValidationError } from '../shared/errors.js';
+import { Semaphore } from '../shared/semaphore.js';
 import { shortId } from '../shared/utils.js';
 import type { AgentEvent, AgentEventListener } from './events.js';
 
@@ -29,22 +30,46 @@ export interface RunTaskInput {
  * It depends only on domain ports, keeping it fully unit-testable with fakes.
  */
 export class AgentOrchestrator {
+  /** Caps concurrent browser tasks across the process. */
+  private readonly gate: Semaphore;
+
   constructor(
     private readonly browserProvider: BrowserProvider,
     private readonly planner: Planner,
     private readonly repository: TaskRepository,
     private readonly config: AppConfig,
     private readonly logger: Logger,
-  ) {}
+  ) {
+    this.gate = new Semaphore(config.server.maxConcurrentTasks);
+  }
 
   /**
    * Run a task to completion.
+   *
+   * A process-wide concurrency limit ({@link AppConfig.server.maxConcurrentTasks})
+   * is enforced first: if the limit is reached this throws a 429 `AppError`
+   * before any browser session is created.
+   *
    * @param input       Instruction and optional start URL.
    * @param onEvent     Optional listener for streaming progress events.
    */
   async run(input: RunTaskInput, onEvent?: AgentEventListener): Promise<Task> {
     this.validate(input);
 
+    // Reserve a concurrency slot before allocating any expensive resources.
+    const release = this.gate.tryAcquire();
+    try {
+      return await this.execute(input, onEvent);
+    } finally {
+      release();
+    }
+  }
+
+  /** Internal task execution (concurrency slot already held). */
+  private async execute(
+    input: RunTaskInput,
+    onEvent?: AgentEventListener,
+  ): Promise<Task> {
     const task = createTask({
       id: shortId('task_'),
       instruction: input.instruction.trim(),
