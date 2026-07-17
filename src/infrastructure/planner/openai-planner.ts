@@ -1,0 +1,121 @@
+import type { AppConfig } from '../../config/index.js';
+import { AgentActionSchema, type AgentAction } from '../../domain/actions.js';
+import type { Planner, PlanningContext } from '../../domain/ports.js';
+import type { Logger } from '../logging/logger.js';
+import { PlannerError, toError } from '../../shared/errors.js';
+import { buildUserPrompt, SYSTEM_PROMPT } from './prompt.js';
+
+interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface ChatCompletionResponse {
+  choices?: Array<{ message?: { content?: string } }>;
+}
+
+/**
+ * Planner backed by any OpenAI-compatible Chat Completions endpoint.
+ *
+ * The adapter is deliberately thin (uses global `fetch`, no SDK) so it works
+ * with OpenAI, Azure OpenAI, Ollama, LM Studio, OpenRouter, etc. by only
+ * changing `LLM_BASE_URL`/`LLM_MODEL`.
+ */
+export class OpenAiPlanner implements Planner {
+  constructor(
+    private readonly config: AppConfig['llm'],
+    private readonly logger: Logger,
+  ) {
+    if (!config.apiKey) {
+      this.logger.warn(
+        'LLM_PROVIDER=openai but LLM_API_KEY is empty; requests will likely fail.',
+      );
+    }
+  }
+
+  async planNextAction(context: PlanningContext): Promise<AgentAction> {
+    const messages: ChatMessage[] = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: buildUserPrompt(context) },
+    ];
+
+    const content = await this.chat(messages);
+    return this.parseAction(content);
+  }
+
+  /** Call the chat completions endpoint and return raw assistant content. */
+  private async chat(messages: ChatMessage[]): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60_000);
+    try {
+      const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.config.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.config.model,
+          temperature: this.config.temperature,
+          messages,
+          response_format: { type: 'json_object' },
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new PlannerError(
+          `LLM request failed with status ${response.status}`,
+          { status: response.status, body: body.slice(0, 500) },
+        );
+      }
+
+      const data = (await response.json()) as ChatCompletionResponse;
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) {
+        throw new PlannerError('LLM returned an empty response.');
+      }
+      return content;
+    } catch (error) {
+      if (error instanceof PlannerError) throw error;
+      throw new PlannerError('Failed to reach the LLM provider.', {
+        cause: toError(error).message,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  /** Extract and validate a single action from the model output. */
+  private parseAction(content: string): AgentAction {
+    const json = this.extractJson(content);
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(json);
+    } catch {
+      throw new PlannerError('LLM response was not valid JSON.', { content });
+    }
+
+    const result = AgentActionSchema.safeParse(parsed);
+    if (!result.success) {
+      throw new PlannerError('LLM produced an invalid action.', {
+        issues: result.error.issues,
+        content,
+      });
+    }
+    return result.data;
+  }
+
+  /** Strip markdown fences / surrounding prose to isolate the JSON object. */
+  private extractJson(content: string): string {
+    const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced?.[1]) return fenced[1].trim();
+    const first = content.indexOf('{');
+    const last = content.lastIndexOf('}');
+    if (first !== -1 && last !== -1 && last > first) {
+      return content.slice(first, last + 1);
+    }
+    return content.trim();
+  }
+}
