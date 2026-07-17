@@ -1,0 +1,65 @@
+{
+  "name": "lyraxc",
+  "version": "1.0.0",
+  "description": "Lyraxc — an autonomous agent that performs human-like actions in a real browser from natural-language instructions.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "lyraxc": "dist/cli/index.js"
+  },
+  "scripts": {
+    "dev": "tsx watch src/interface/http/server.ts",
+    "dev:cli": "tsx src/interface/cli/index.ts",
+    "build": "tsup",
+    "start": "node dist/http/server.js",
+    "cli": "node dist/cli/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "postinstall": "node scripts/postinstall.mjs"
+  },
+  "keywords": [
+    "browser-automation",
+    "agent",
+    "playwright",
+    "ai-agent",
+    "human-like",
+    "web-automation",
+    "llm"
+  ],
+  "author": "Lyraxc Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "pino": "^9.3.2",
+    "pino-pretty": "^11.2.2",
+    "playwright": "^1.46.0",
+    "ws": "^8.18.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.14",
+    "@types/ws": "^8.5.12",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitest/coverage-v8": "^2.0.5",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "tsup": "^8.2.4",
+    "tsx": "^4.16.5",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}
